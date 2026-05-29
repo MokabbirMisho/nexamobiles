@@ -28,6 +28,13 @@ export const useAuthStore = create((set, get) => ({
     return data.user;
   },
 
+  async googleLogin(credential) {
+    const { data } = await api.post('/auth/google', { credential });
+    set({ user: data.user, token: data.token });
+    save(get());
+    return data.user;
+  },
+
   logout() {
     set({ user: null, token: null });
     localStorage.removeItem('nexa_auth');

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore.js';
 import { useCartStore } from '../../store/cartStore.js';
+import GoogleAuthButton from '../../components/auth/GoogleAuthButton.jsx';
 
 export default function Signup() {
   const register = useAuthStore((s) => s.register);
@@ -34,6 +35,7 @@ export default function Signup() {
           <input className="input" type="password" placeholder="Password (min 6 chars)" value={form.password} onChange={set('password')} required />
         </div>
         <button disabled={busy} className="btn-primary mt-6 w-full">{busy ? 'Creating...' : 'Sign up'}</button>
+        <GoogleAuthButton onDone={() => navigate('/')} onError={setError} />
         <p className="mt-4 text-center text-sm text-gray-500">
           Have an account? <Link to="/login" className="text-accent">Login</Link>
         </p>
