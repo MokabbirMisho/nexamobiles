@@ -78,7 +78,7 @@ export default function Checkout() {
             ) : (
               <div className="card max-w-md p-6">
                 <p className="mb-4 font-medium text-graphite">Enter card details</p>
-                <MockCardForm total={amount} />
+                <MockCardForm order={order} total={amount} onPaid={handlePaid} onError={setError} />
               </div>
             )
           ) : (

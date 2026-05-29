@@ -16,6 +16,7 @@ import Signup from './pages/public/Signup.jsx';
 import Checkout from './pages/customer/Checkout.jsx';
 import Orders from './pages/customer/Orders.jsx';
 import OrderDetail from './pages/customer/OrderDetail.jsx';
+import Account from './pages/customer/Account.jsx';
 
 import AdminLayout from './pages/admin/AdminLayout.jsx';
 import Dashboard from './pages/admin/Dashboard.jsx';
@@ -23,6 +24,7 @@ import ProductList from './pages/admin/ProductList.jsx';
 import ProductForm from './pages/admin/ProductForm.jsx';
 import OrderList from './pages/admin/OrderList.jsx';
 import StockManager from './pages/admin/StockManager.jsx';
+import AdminManager from './pages/admin/AdminManager.jsx';
 
 export default function App() {
   const load = useCartStore((s) => s.load);
@@ -43,6 +45,7 @@ export default function App() {
           <Route path="/signup" element={<Signup />} />
 
           <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+          <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
           <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
           <Route path="/orders/:orderId" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
 
@@ -53,6 +56,7 @@ export default function App() {
             <Route path="products/:id/edit" element={<ProductForm />} />
             <Route path="orders" element={<OrderList />} />
             <Route path="stock" element={<StockManager />} />
+            <Route path="admins" element={<AdminManager />} />
           </Route>
 
           <Route path="*" element={<div className="container-page py-24 text-center text-gray-500">Page not found.</div>} />

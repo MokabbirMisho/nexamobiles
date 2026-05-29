@@ -109,7 +109,7 @@ export const markOrderPaid = async (orderId, provider, providerPaymentId, amount
     const updated = await tx.order.update({
       where: { id: orderId },
       data: { paymentStatus: 'PAID', status: 'CONFIRMED' },
-      include: { items: true, user: true },
+      include: { items: { include: { product: true, variant: true } }, user: true },
     });
     await tx.payment.create({
       data: { orderId, provider, providerPaymentId, amount, status: 'SUCCEEDED' },

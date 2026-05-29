@@ -1,14 +1,10 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore.js';
 import { useCartStore } from '../../store/cartStore.js';
 
 export default function Navbar() {
-  const { user, token, logout } = useAuthStore();
+  const { user, token } = useAuthStore();
   const count = useCartStore((s) => s.count());
-  const clearLocal = useCartStore((s) => s.clearLocal);
-  const navigate = useNavigate();
-
-  const handleLogout = () => { logout(); clearLocal(); navigate('/'); };
 
   return (
     <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/80 backdrop-blur">
@@ -28,7 +24,9 @@ export default function Navbar() {
           {token ? (
             <>
               <Link to="/orders" className="text-gray-600 hover:text-graphite">Orders</Link>
-              <button onClick={handleLogout} className="text-gray-600 hover:text-graphite">Logout</button>
+              <Link to="/account" className="text-gray-600 hover:text-graphite">
+                {user?.name?.split(' ')[0] || 'Account'}
+              </Link>
             </>
           ) : (
             <Link to="/login" className="btn-primary">Login</Link>

@@ -85,6 +85,23 @@ export const confirmStripe = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// POST /api/payments/mock/confirm  { orderId }
+// Demo payment: completes an order without a real gateway. Only allowed while
+// Stripe is not configured (i.e. the visual MockCardForm is in use).
+export const confirmMockPayment = async (req, res, next) => {
+  try {
+    if (stripe)
+      return res.status(400).json({ message: 'Real payments are enabled; use the card form.' });
+    const order = await loadOwnedOrder(req.body.orderId, req.user);
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+    if (order.paymentStatus === 'PAID')
+      return res.status(400).json({ message: 'Order already paid' });
+
+    const updated = await markOrderPaid(order.id, 'mock', `demo-${order.id}`, order.totalAmount);
+    res.json(updated);
+  } catch (err) { next(err); }
+};
+
 // POST /api/payments/paypal/create-order  { orderId }
 export const paypalCreateOrder = async (req, res, next) => {
   try {

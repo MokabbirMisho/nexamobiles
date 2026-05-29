@@ -35,6 +35,19 @@ export const useAuthStore = create((set, get) => ({
     return data.user;
   },
 
+  async updateProfile(payload) {
+    const { data } = await api.patch('/auth/me', payload);
+    set({ user: data.user });
+    save(get());
+    return data.user;
+  },
+
+  async deleteAccount() {
+    await api.delete('/auth/me');
+    set({ user: null, token: null });
+    localStorage.removeItem('nexa_auth');
+  },
+
   logout() {
     set({ user: null, token: null });
     localStorage.removeItem('nexa_auth');

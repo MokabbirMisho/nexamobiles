@@ -25,6 +25,8 @@
     "express": "^4.21.1",
     "google-auth-library": "^10.6.2",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.10.1",
+    "pdfkit": "^0.18.0",
     "resend": "^4.0.1",
     "stripe": "^17.4.0"
   },

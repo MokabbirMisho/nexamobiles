@@ -14,6 +14,7 @@ export default function AdminLayout() {
           <NavLink to="/admin/products/new" className={link}>Add product</NavLink>
           <NavLink to="/admin/orders" className={link}>Orders</NavLink>
           <NavLink to="/admin/stock" className={link}>Stock</NavLink>
+          <NavLink to="/admin/admins" className={link}>Admins</NavLink>
         </nav>
       </aside>
       <section><Outlet /></section>

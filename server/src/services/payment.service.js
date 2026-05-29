@@ -1,7 +1,9 @@
 import Stripe from 'stripe';
 
 const stripeKey = process.env.STRIPE_SECRET_KEY;
-export const stripe = stripeKey ? new Stripe(stripeKey) : null;
+// Treat placeholder / non-real keys as "not configured" so the demo flow works.
+const stripeConfigured = !!stripeKey && stripeKey.startsWith('sk_') && !stripeKey.includes('xxx');
+export const stripe = stripeConfigured ? new Stripe(stripeKey) : null;
 
 // ---- PayPal REST helpers ----
 const PAYPAL_BASE = process.env.PAYPAL_API_BASE || 'https://api-m.sandbox.paypal.com';
