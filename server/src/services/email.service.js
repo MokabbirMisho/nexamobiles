@@ -3,13 +3,17 @@ import { Resend } from 'resend';
 import { generateReceiptPdf } from './receipt.service.js';
 
 // --- Sender selection ---------------------------------------------------
-// Preferred: Gmail SMTP (free, can send to ANY recipient, ~500/day).
-//   Needs GMAIL_USER + GMAIL_APP_PASSWORD (a 16-char Google "App password").
-// Fallback: Resend (free tier only sends to your own account email unless a
-//   domain is verified).
+// Provider priority (first one configured wins):
+//   1. Brevo  — HTTP API (port 443), works on Render's free tier where SMTP is
+//      blocked. Free 300/day; can send to ANY recipient once a single sender
+//      email is verified (no domain needed). Set BREVO_API_KEY (+ EMAIL_FROM).
+//   2. Gmail SMTP — works locally; blocked on Render free tier.
+//   3. Resend — HTTP API, but free tier only sends to your own account email.
+const brevoKey = process.env.BREVO_API_KEY;
 const gmailUser = process.env.GMAIL_USER;
 const gmailPass = process.env.GMAIL_APP_PASSWORD;
-const useGmail = !!(gmailUser && gmailPass);
+const useBrevo = !!brevoKey;
+const useGmail = !useBrevo && !!(gmailUser && gmailPass);
 
 const transporter = useGmail
   ? nodemailer.createTransport({
@@ -19,12 +23,49 @@ const transporter = useGmail
   : null;
 
 const apiKey = process.env.RESEND_API_KEY;
-const resend = !useGmail && apiKey ? new Resend(apiKey) : null;
+const resend = !useBrevo && !useGmail && apiKey ? new Resend(apiKey) : null;
 
-const FROM = process.env.EMAIL_FROM || `NexaMobiles <${gmailUser || 'onboarding@resend.dev'}>`;
+const FROM =
+  process.env.EMAIL_FROM ||
+  `NexaMobiles <${gmailUser || 'mokabbirmiso1992@gmail.com'}>`;
 
-// Core send helper: routes through Gmail SMTP or Resend, logs the outcome.
+// Parse "Name <email@x.com>" or "email@x.com" into { name, email }.
+const parseFrom = (s) => {
+  const m = s.match(/^\s*(.*?)\s*<\s*([^>]+)\s*>\s*$/);
+  if (m) return { name: m[1] || 'NexaMobiles', email: m[2] };
+  return { name: 'NexaMobiles', email: s.trim() };
+};
+
+// Core send helper: routes through Brevo / Gmail / Resend, logs the outcome.
 const send = async ({ to, subject, html, pdf, pdfName }) => {
+  if (useBrevo) {
+    const sender = parseFrom(FROM);
+    const body = {
+      sender,
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    };
+    if (pdf) body.attachment = [{ name: pdfName, content: pdf.toString('base64') }];
+
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': brevoKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error(`[email] Brevo rejected (${res.status}):`, txt);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      console.log(`[email] sent to ${to} via Brevo (id=${data.messageId || 'ok'})`);
+    }
+    return;
+  }
   if (useGmail) {
     const attachments = pdf ? [{ filename: pdfName, content: pdf }] : undefined;
     const info = await transporter.sendMail({ from: FROM, to, subject, html, attachments });
