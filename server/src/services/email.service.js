@@ -1,33 +1,12 @@
-import nodemailer from 'nodemailer';
-import { Resend } from 'resend';
 import { generateReceiptPdf } from './receipt.service.js';
 
-// --- Sender selection ---------------------------------------------------
-// Provider priority (first one configured wins):
-//   1. Brevo  — HTTP API (port 443), works on Render's free tier where SMTP is
-//      blocked. Free 300/day; can send to ANY recipient once a single sender
-//      email is verified (no domain needed). Set BREVO_API_KEY (+ EMAIL_FROM).
-//   2. Gmail SMTP — works locally; blocked on Render free tier.
-//   3. Resend — HTTP API, but free tier only sends to your own account email.
+// --- Email provider: Brevo (HTTP API) -----------------------------------
+// Brevo's HTTP API uses port 443, so it works on Render's free tier (where
+// outbound SMTP is blocked). Free 300/day; can send to ANY recipient once a
+// single sender email is verified (no domain needed).
+//   Set BREVO_API_KEY (+ optional EMAIL_FROM, defaults below).
 const brevoKey = process.env.BREVO_API_KEY;
-const gmailUser = process.env.GMAIL_USER;
-const gmailPass = process.env.GMAIL_APP_PASSWORD;
-const useBrevo = !!brevoKey;
-const useGmail = !useBrevo && !!(gmailUser && gmailPass);
-
-const transporter = useGmail
-  ? nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: gmailUser, pass: gmailPass },
-    })
-  : null;
-
-const apiKey = process.env.RESEND_API_KEY;
-const resend = !useBrevo && !useGmail && apiKey ? new Resend(apiKey) : null;
-
-const FROM =
-  process.env.EMAIL_FROM ||
-  `NexaMobiles <${gmailUser || 'mokabbirmiso1992@gmail.com'}>`;
+const FROM = process.env.EMAIL_FROM || 'NexaMobiles <mokabbirmiso1992@gmail.com>';
 
 // Parse "Name <email@x.com>" or "email@x.com" into { name, email }.
 const parseFrom = (s) => {
@@ -36,50 +15,38 @@ const parseFrom = (s) => {
   return { name: 'NexaMobiles', email: s.trim() };
 };
 
-// Core send helper: routes through Brevo / Gmail / Resend, logs the outcome.
+// Core send helper: posts to Brevo and logs the outcome.
 const send = async ({ to, subject, html, pdf, pdfName }) => {
-  if (useBrevo) {
-    const sender = parseFrom(FROM);
-    const body = {
-      sender,
-      to: [{ email: to }],
-      subject,
-      htmlContent: html,
-    };
-    if (pdf) body.attachment = [{ name: pdfName, content: pdf.toString('base64') }];
+  if (!brevoKey) {
+    console.log(`[email] (Brevo not configured) would send "${subject}" to ${to}`);
+    return;
+  }
 
-    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'api-key': brevoKey,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      console.error(`[email] Brevo rejected (${res.status}):`, txt);
-    } else {
-      const data = await res.json().catch(() => ({}));
-      console.log(`[email] sent to ${to} via Brevo (id=${data.messageId || 'ok'})`);
-    }
-    return;
+  const body = {
+    sender: parseFrom(FROM),
+    to: [{ email: to }],
+    subject,
+    htmlContent: html,
+  };
+  if (pdf) body.attachment = [{ name: pdfName, content: pdf.toString('base64') }];
+
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': brevoKey,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    console.error(`[email] Brevo rejected (${res.status}):`, txt);
+  } else {
+    const data = await res.json().catch(() => ({}));
+    console.log(`[email] sent to ${to} via Brevo (id=${data.messageId || 'ok'})`);
   }
-  if (useGmail) {
-    const attachments = pdf ? [{ filename: pdfName, content: pdf }] : undefined;
-    const info = await transporter.sendMail({ from: FROM, to, subject, html, attachments });
-    console.log(`[email] sent to ${to} via Gmail (id=${info.messageId})`);
-    return;
-  }
-  if (resend) {
-    const attachments = pdf ? [{ filename: pdfName, content: pdf.toString('base64') }] : undefined;
-    const r = await resend.emails.send({ from: FROM, to, subject, html, attachments });
-    if (r?.error) console.error('[email] rejected by Resend:', JSON.stringify(r.error));
-    else console.log(`[email] sent to ${to} via Resend (id=${r?.data?.id})`);
-    return;
-  }
-  console.log(`[email] (no email provider configured) would send "${subject}" to ${to}`);
 };
 
 // Sent right after a customer creates an account.
