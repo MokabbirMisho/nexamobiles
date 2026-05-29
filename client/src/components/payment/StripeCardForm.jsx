@@ -25,7 +25,19 @@ export default function StripeCardForm({ order, total, onPaid, onError }) {
     setBusy(true); onError('');
     try {
       // 1. ask server for a PaymentIntent client secret
-      const { data } = await api.post('/payments/stripe/create-intent', { orderId: order.id });
+      let data;
+      try {
+        ({ data } = await api.post('/payments/stripe/create-intent', { orderId: order.id }));
+      } catch (intentErr) {
+        // Server has no real Stripe configured -> fall back to demo confirmation
+        // so the order still completes (and the PDF receipt email is sent).
+        if (intentErr.response?.status === 503) {
+          await api.post('/payments/mock/confirm', { orderId: order.id });
+          onPaid();
+          return;
+        }
+        throw intentErr;
+      }
 
       // 2. confirm the card payment on the client (card data goes straight to Stripe)
       const result = await stripe.confirmCardPayment(data.clientSecret, {
